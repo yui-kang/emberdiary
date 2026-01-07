@@ -123,6 +123,51 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        .now-weather-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            flex-wrap: wrap;
+        }
+
+        .now-time {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .weather-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .weather-icon {
+            font-size: 16px;
+        }
+
+        .set-location-link {
+            color: var(--accent);
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .set-location-link:hover {
+            color: var(--accent-hover);
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -169,6 +214,15 @@
 
         .mood-emoji {
             font-size: 24px;
+        }
+
+        .custom-mood-input {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .custom-mood-input.visible {
+            display: block;
         }
 
         input[type="text"], textarea {
@@ -431,6 +485,41 @@
             display: none;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .modal-content .button-group {
+            margin-top: 16px;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -453,6 +542,10 @@
                 left: 20px;
                 right: 20px;
             }
+
+            .now-weather-bar {
+                font-size: 13px;
+            }
         }
     </style>
 </head>
@@ -471,6 +564,15 @@
 
         <!-- New Entry Tab -->
         <div class="tab-content active" id="new-entry">
+            <div class="now-weather-bar">
+                <div class="now-time" id="nowTime">Now: Loading...</div>
+                <div class="weather-chip" id="weatherChip" style="display: none;">
+                    <span class="weather-icon" id="weatherIcon">🌤️</span>
+                    <span id="weatherText">Loading...</span>
+                </div>
+                <a class="set-location-link" id="setLocationLink" style="display: none;" onclick="app.showLocationModal()">Set location</a>
+            </div>
+
             <div class="banner hidden" id="draftBanner">
                 <span>📝 Recovered unsaved draft</span>
                 <button onclick="app.dismissDraftBanner()">Dismiss</button>
@@ -508,6 +610,14 @@
                             <span class="mood-emoji">✨</span>
                             <span>Excited</span>
                         </button>
+                        <button type="button" class="mood-button" data-mood="Custom">
+                            <span class="mood-emoji">➕</span>
+                            <span>Custom</span>
+                        </button>
+                    </div>
+                    <div class="custom-mood-input" id="customMoodInput">
+                        <label for="customMoodText">Custom mood</label>
+                        <input type="text" id="customMoodText" placeholder="Enter your mood...">
                     </div>
                 </div>
 
@@ -576,6 +686,11 @@
             </div>
 
             <div class="form-group">
+                <label>Weather Settings</label>
+                <button class="secondary" onclick="app.clearWeatherCache()">Clear Weather Cache</button>
+            </div>
+
+            <div class="form-group">
                 <label>Danger Zone</label>
                 <button class="danger" onclick="app.deleteAllData()">🗑️ Delete All Data</button>
             </div>
@@ -591,6 +706,21 @@
         </div>
     </div>
 
+    <!-- Location Modal -->
+    <div class="modal" id="locationModal">
+        <div class="modal-content">
+            <h3>Set Location</h3>
+            <div class="form-group">
+                <label for="cityInput">Enter city name</label>
+                <input type="text" id="cityInput" placeholder="e.g., San Francisco">
+            </div>
+            <div class="button-group">
+                <button onclick="app.saveManualLocation()">Save</button>
+                <button class="secondary" onclick="app.hideLocationModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // === APP STATE AND CONSTANTS ===
         const APP_VERSION = '0.1.0';
@@ -600,6 +730,8 @@
         const STORE_DRAFT = 'draft';
         const DRAFT_KEY = 'current_draft';
         const AUTOSAVE_DELAY = 600;
+        const OPENWEATHER_API_KEY = 'P6f8e9ab56e87ae1770f809e881aa86ea'; // NOTE: This key is client-side by design (personal use, low volume)
+        const WEATHER_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
         const MOOD_EMOJIS = {
             'Calm': '😌',
@@ -628,6 +760,18 @@
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
+            });
+        }
+
+        function formatNowTime() {
+            const date = new Date();
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
             });
         }
 
@@ -755,14 +899,149 @@
             }
         }
 
+        // === WEATHER SERVICE ===
+        class WeatherService {
+            constructor() {
+                this.apiKey = OPENWEATHER_API_KEY;
+            }
+
+            getCachedWeather() {
+                const cached = localStorage.getItem('weather-cache');
+                if (!cached) return null;
+
+                try {
+                    const data = JSON.parse(cached);
+                    const now = Date.now();
+                    if (now - data.timestamp < WEATHER_CACHE_DURATION) {
+                        return data.weather;
+                    }
+                } catch (e) {
+                    console.error('Failed to parse weather cache:', e);
+                }
+                return null;
+            }
+
+            cacheWeather(weather) {
+                try {
+                    localStorage.setItem('weather-cache', JSON.stringify({
+                        weather: weather,
+                        timestamp: Date.now()
+                    }));
+                } catch (e) {
+                    console.error('Failed to cache weather:', e);
+                }
+            }
+
+            async fetchWeatherByCoords(lat, lon) {
+                if (this.apiKey === 'PASTE_KEY_HERE') {
+                    return null; // No API key set
+                }
+
+                try {
+                    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${this.apiKey}&units=imperial`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Weather API error');
+                    const data = await response.json();
+                    
+                    return {
+                        temp: Math.round(data.main.temp),
+                        description: data.weather[0].description,
+                        city: data.name,
+                        icon: this.getWeatherIcon(data.weather[0].id)
+                    };
+                } catch (e) {
+                    console.error('Weather fetch failed:', e);
+                    return null;
+                }
+            }
+
+            async fetchWeatherByCity(city) {
+                if (this.apiKey === 'PASTE_KEY_HERE') {
+                    return null;
+                }
+
+                try {
+                    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=imperial`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Weather API error');
+                    const data = await response.json();
+                    
+                    return {
+                        temp: Math.round(data.main.temp),
+                        description: data.weather[0].description,
+                        city: data.name,
+                        icon: this.getWeatherIcon(data.weather[0].id)
+                    };
+                } catch (e) {
+                    console.error('Weather fetch failed:', e);
+                    return null;
+                }
+            }
+
+            getWeatherIcon(weatherId) {
+                if (weatherId >= 200 && weatherId < 300) return '⛈️';
+                if (weatherId >= 300 && weatherId < 400) return '🌦️';
+                if (weatherId >= 500 && weatherId < 600) return '🌧️';
+                if (weatherId >= 600 && weatherId < 700) return '❄️';
+                if (weatherId >= 700 && weatherId < 800) return '🌫️';
+                if (weatherId === 800) return '☀️';
+                if (weatherId > 800) return '☁️';
+                return '🌤️';
+            }
+
+            async getWeather() {
+                // Check cache first
+                const cached = this.getCachedWeather();
+                if (cached) return cached;
+
+                // Check for manual location
+                const manualCity = localStorage.getItem('manual-location');
+                if (manualCity) {
+                    const weather = await this.fetchWeatherByCity(manualCity);
+                    if (weather) {
+                        this.cacheWeather(weather);
+                        return weather;
+                    }
+                }
+
+                // Try geolocation
+                if (navigator.geolocation) {
+                    return new Promise((resolve) => {
+                        navigator.geolocation.getCurrentPosition(
+                            async (position) => {
+                                const weather = await this.fetchWeatherByCoords(
+                                    position.coords.latitude,
+                                    position.coords.longitude
+                                );
+                                if (weather) {
+                                    this.cacheWeather(weather);
+                                }
+                                resolve(weather);
+                            },
+                            (error) => {
+                                console.log('Geolocation denied or unavailable');
+                                resolve(null);
+                            },
+                            { timeout: 5000 }
+                        );
+                    });
+                }
+
+                return null;
+            }
+        }
+
         // === MAIN APP ===
         class EmberDiary {
             constructor() {
                 this.db = new Database();
+                this.weatherService = new WeatherService();
                 this.currentTab = 'new-entry';
                 this.entries = [];
                 this.selectedMood = '';
+                this.isCustomMood = false;
                 this.autosaveDraft = debounce(() => this.saveDraft(), AUTOSAVE_DELAY);
+                this.timeUpdateInterval = null;
             }
 
             async init() {
@@ -772,6 +1051,8 @@
                     this.loadTheme();
                     await this.loadDraft();
                     await this.loadEntries();
+                    this.startTimeUpdates();
+                    this.loadWeather();
                     this.showToast('Welcome to Ember Diary! 🔥', 'success');
                 } catch (error) {
                     console.error('Initialization error:', error);
@@ -791,6 +1072,11 @@
                         e.preventDefault();
                         this.selectMood(button.dataset.mood);
                     });
+                });
+
+                // Custom mood input
+                document.getElementById('customMoodText').addEventListener('input', () => {
+                    this.autosaveDraft();
                 });
 
                 // Form submission
@@ -832,22 +1118,34 @@
 
             selectMood(mood) {
                 this.selectedMood = mood;
+                this.isCustomMood = mood === 'Custom';
+
                 document.querySelectorAll('.mood-button').forEach(btn => {
                     btn.classList.toggle('selected', btn.dataset.mood === mood);
                 });
+
+                const customInput = document.getElementById('customMoodInput');
+                if (this.isCustomMood) {
+                    customInput.classList.add('visible');
+                } else {
+                    customInput.classList.remove('visible');
+                }
+
                 this.autosaveDraft();
             }
 
             async saveDraft() {
                 const whisper = document.getElementById('whisperInput').value;
                 const tags = document.getElementById('tagsInput').value;
+                const customMood = document.getElementById('customMoodText').value;
 
                 if (!whisper && !tags && !this.selectedMood) {
-                    return; // Nothing to save
+                    return;
                 }
 
                 const draft = {
                     mood: this.selectedMood,
+                    customMood: this.isCustomMood ? customMood : '',
                     whisper: whisper,
                     tags: tags,
                     timestamp: new Date().toISOString()
@@ -866,9 +1164,15 @@
                     if (draft && (draft.whisper || draft.tags || draft.mood)) {
                         document.getElementById('whisperInput').value = draft.whisper || '';
                         document.getElementById('tagsInput').value = draft.tags || '';
+                        
                         if (draft.mood) {
                             this.selectMood(draft.mood);
+                            
+                            if (draft.mood === 'Custom' && draft.customMood) {
+                                document.getElementById('customMoodText').value = draft.customMood;
+                            }
                         }
+                        
                         document.getElementById('draftBanner').classList.remove('hidden');
                     }
                 } catch (error) {
@@ -889,10 +1193,13 @@
                     await this.db.clearDraft();
                     document.getElementById('whisperInput').value = '';
                     document.getElementById('tagsInput').value = '';
+                    document.getElementById('customMoodText').value = '';
                     this.selectedMood = '';
+                    this.isCustomMood = false;
                     document.querySelectorAll('.mood-button').forEach(btn => {
                         btn.classList.remove('selected');
                     });
+                    document.getElementById('customMoodInput').classList.remove('visible');
                     document.getElementById('draftBanner').classList.add('hidden');
                     this.showToast('Draft cleared', 'success');
                 } catch (error) {
@@ -904,7 +1211,7 @@
             async saveEntry() {
                 const whisper = document.getElementById('whisperInput').value.trim();
                 const tagsInput = document.getElementById('tagsInput').value.trim();
-                const mood = this.selectedMood;
+                let mood = this.selectedMood;
 
                 if (!whisper) {
                     this.showToast('Please write something before saving', 'error');
@@ -914,6 +1221,16 @@
                 if (!mood) {
                     this.showToast('Please select a mood', 'error');
                     return;
+                }
+
+                // Handle custom mood
+                if (this.isCustomMood) {
+                    const customMood = document.getElementById('customMoodText').value.trim();
+                    if (!customMood) {
+                        this.showToast('Please enter a custom mood', 'error');
+                        return;
+                    }
+                    mood = customMood;
                 }
 
                 const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
@@ -934,10 +1251,13 @@
                     // Clear form
                     document.getElementById('whisperInput').value = '';
                     document.getElementById('tagsInput').value = '';
+                    document.getElementById('customMoodText').value = '';
                     this.selectedMood = '';
+                    this.isCustomMood = false;
                     document.querySelectorAll('.mood-button').forEach(btn => {
                         btn.classList.remove('selected');
                     });
+                    document.getElementById('customMoodInput').classList.remove('visible');
                     document.getElementById('draftBanner').classList.add('hidden');
 
                     await this.loadEntries();
@@ -952,11 +1272,50 @@
                 try {
                     this.entries = await this.db.getAllEntries();
                     this.entries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    this.updateMoodFilter();
                     this.renderEntries();
                     this.updateStats();
                 } catch (error) {
                     console.error('Failed to load entries:', error);
                     this.showToast('Failed to load entries', 'error');
+                }
+            }
+
+            updateMoodFilter() {
+                const moodFilter = document.getElementById('moodFilter');
+                const currentSelection = moodFilter.value;
+
+                // Get unique moods from all entries
+                const allMoods = new Set();
+                this.entries.forEach(entry => {
+                    allMoods.add(entry.mood);
+                });
+
+                // Filter out preset moods to get custom moods
+                const presetMoods = ['Calm', 'Good', 'Low', 'Angry', 'Overwhelmed', 'Tired', 'Excited'];
+                const customMoods = Array.from(allMoods).filter(mood => !presetMoods.includes(mood));
+                customMoods.sort(); // Sort alphabetically
+
+                // Build options HTML
+                let optionsHtml = '<option value="">All moods</option>';
+
+                // Add preset mood options
+                presetMoods.forEach(mood => {
+                    const emoji = MOOD_EMOJIS[mood] || '';
+                    optionsHtml += `<option value="${mood}">${emoji} ${mood}</option>`;
+                });
+
+                // Add custom mood options
+                customMoods.forEach(mood => {
+                    optionsHtml += `<option value="${mood}">💭 ${mood}</option>`;
+                });
+
+                moodFilter.innerHTML = optionsHtml;
+
+                // Restore selection if it still exists in the new options
+                const optionExists = Array.from(moodFilter.options).some(opt => opt.value === currentSelection);
+                if (currentSelection && optionExists) {
+                    moodFilter.value = currentSelection;
                 }
             }
 
@@ -1000,11 +1359,13 @@
                 entryList.innerHTML = entries.map(entry => {
                     const preview = entry.whisper.substring(0, 100) + (entry.whisper.length > 100 ? '...' : '');
                     const tagsHtml = entry.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+                    const moodEmoji = MOOD_EMOJIS[entry.mood] || '💭';
+                    const moodDisplay = MOOD_EMOJIS[entry.mood] ? `${moodEmoji} ${entry.mood}` : `💭 ${entry.mood}`;
 
                     return `
                         <div class="entry-card" data-id="${entry.id}">
                             <div class="entry-header">
-                                <span class="entry-mood">${MOOD_EMOJIS[entry.mood] || '😌'} ${entry.mood}</span>
+                                <span class="entry-mood">${moodDisplay}</span>
                                 <span class="entry-date">${formatDate(entry.createdAt)}</span>
                             </div>
                             <div class="entry-preview">${preview}</div>
@@ -1017,7 +1378,6 @@
                     `;
                 }).join('');
 
-                // Add click handlers for expansion
                 document.querySelectorAll('.entry-card').forEach(card => {
                     card.addEventListener('click', (e) => {
                         if (e.target.tagName !== 'BUTTON') {
@@ -1079,7 +1439,6 @@
                         throw new Error('Invalid data format');
                     }
 
-                    // Get existing entries to check for duplicates
                     const existingEntries = await this.db.getAllEntries();
                     const existingIds = new Set(existingEntries.map(e => e.id));
 
@@ -1101,7 +1460,7 @@
                     console.error('Import failed:', error);
                     this.showToast('Failed to import data. Check file format.', 'error');
                 } finally {
-                    event.target.value = ''; // Clear file input
+                    event.target.value = '';
                 }
             }
 
@@ -1117,6 +1476,7 @@
                 try {
                     await this.db.clearAllData();
                     this.entries = [];
+                    this.updateMoodFilter();
                     this.renderEntries();
                     this.updateStats();
                     this.showToast('All data deleted', 'success');
@@ -1139,6 +1499,67 @@
                 const isDark = document.body.classList.contains('dark-mode');
                 document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
                 localStorage.setItem('ember-theme', isDark ? 'dark' : 'light');
+            }
+
+            startTimeUpdates() {
+                this.updateNowTime();
+                this.timeUpdateInterval = setInterval(() => this.updateNowTime(), 60000);
+            }
+
+            updateNowTime() {
+                document.getElementById('nowTime').textContent = 'Now: ' + formatNowTime();
+            }
+
+            async loadWeather() {
+                const weather = await this.weatherService.getWeather();
+                
+                if (weather) {
+                    document.getElementById('weatherIcon').textContent = weather.icon;
+                    document.getElementById('weatherText').textContent = 
+                        `${weather.temp}°F, ${weather.description} • ${weather.city}`;
+                    document.getElementById('weatherChip').style.display = 'flex';
+                } else {
+                    // Show "Set location" link if weather is unavailable
+                    const hasManualLocation = localStorage.getItem('manual-location');
+                    if (!hasManualLocation) {
+                        document.getElementById('setLocationLink').style.display = 'inline';
+                    }
+                }
+            }
+
+            showLocationModal() {
+                document.getElementById('locationModal').classList.add('visible');
+            }
+
+            hideLocationModal() {
+                document.getElementById('locationModal').classList.remove('visible');
+                document.getElementById('cityInput').value = '';
+            }
+
+            async saveManualLocation() {
+                const city = document.getElementById('cityInput').value.trim();
+                if (!city) {
+                    this.showToast('Please enter a city name', 'error');
+                    return;
+                }
+
+                localStorage.setItem('manual-location', city);
+                this.hideLocationModal();
+                
+                // Clear cache and reload weather
+                localStorage.removeItem('weather-cache');
+                document.getElementById('setLocationLink').style.display = 'none';
+                await this.loadWeather();
+            }
+
+            clearWeatherCache() {
+                localStorage.removeItem('weather-cache');
+                localStorage.removeItem('manual-location');
+                this.showToast('Weather cache cleared', 'success');
+                
+                // Reload weather
+                document.getElementById('weatherChip').style.display = 'none';
+                this.loadWeather();
             }
 
             showToast(message, type = 'success') {
