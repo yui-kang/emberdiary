@@ -127,7 +127,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
             padding: 12px 16px;
             background: var(--bg-secondary);
             border: 2px solid var(--border);
@@ -166,6 +166,15 @@
 
         .set-location-link:hover {
             color: var(--accent-hover);
+        }
+
+        .ember-whisper {
+            font-style: italic;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            padding: 0 16px;
+            line-height: 1.5;
         }
 
         .form-group {
@@ -573,6 +582,8 @@
                 <a class="set-location-link" id="setLocationLink" style="display: none;" onclick="app.showLocationModal()">Set location</a>
             </div>
 
+            <div class="ember-whisper" id="emberWhisper">I'm here with you.</div>
+
             <div class="banner hidden" id="draftBanner">
                 <span>📝 Recovered unsaved draft</span>
                 <button onclick="app.dismissDraftBanner()">Dismiss</button>
@@ -730,7 +741,7 @@
         const STORE_DRAFT = 'draft';
         const DRAFT_KEY = 'current_draft';
         const AUTOSAVE_DELAY = 600;
-        const OPENWEATHER_API_KEY = '6f8e9ab56e87ae1770f809e881aa86ea'; // NOTE: This key is client-side by design (personal use, low volume)
+        const OPENWEATHER_API_KEY = '6f8e9ab56e87ae1770f809e881aa86ea'; // User needs to add their API key
         const WEATHER_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
         const MOOD_EMOJIS = {
@@ -773,6 +784,32 @@
                 minute: '2-digit',
                 hour12: true
             });
+        }
+
+        function getGreetingByHour(date) {
+            const hour = date.getHours();
+            if (hour >= 5 && hour < 12) {
+                return "Good morning";
+            } else if (hour >= 12 && hour < 17) {
+                return "Good afternoon";
+            } else {
+                return "Good evening";
+            }
+        }
+
+        function getPoeticWeatherTone(description) {
+            const desc = description.toLowerCase();
+            if (desc.includes('rain')) {
+                return "a little gray and rainy—maybe let's keep the warmth close today";
+            } else if (desc.includes('clear')) {
+                return "bright and clear—maybe the world feels a bit more open today";
+            } else if (desc.includes('cloud')) {
+                return "softly overcast—like a quiet sky thinking gentle thoughts";
+            } else if (desc.includes('snow')) {
+                return "covered in snow—cold outside, but you're wrapped safely here with me";
+            } else {
+                return `${description}—a reminder that even the skies shift like moods`;
+            }
         }
 
         function debounce(func, wait) {
@@ -1042,6 +1079,7 @@
                 this.isCustomMood = false;
                 this.autosaveDraft = debounce(() => this.saveDraft(), AUTOSAVE_DELAY);
                 this.timeUpdateInterval = null;
+                this.currentWeather = null;
             }
 
             async init() {
@@ -1507,18 +1545,51 @@
             }
 
             updateNowTime() {
+                const now = new Date();
                 document.getElementById('nowTime').textContent = 'Now: ' + formatNowTime();
+                
+                // Update ember whisper with greeting
+                const greeting = getGreetingByHour(now);
+                this.updateEmberWhisper(greeting);
+            }
+
+            updateEmberWhisper(greeting) {
+                const emberWhisper = document.getElementById('emberWhisper');
+                
+                if (this.currentWeather) {
+                    // We have weather data - show greeting + poetic weather
+                    const poeticTone = getPoeticWeatherTone(this.currentWeather.description);
+                    const temp = this.currentWeather.temp;
+                    const city = this.currentWeather.city;
+                    emberWhisper.textContent = `${greeting}. It's ${poeticTone}. Around ${temp}°F in ${city}.`;
+                } else {
+                    // No weather data - show greeting only
+                    emberWhisper.textContent = `${greeting}. I'm here with you — we can write softly.`;
+                }
             }
 
             async loadWeather() {
                 const weather = await this.weatherService.getWeather();
                 
                 if (weather) {
+                    this.currentWeather = weather;
                     document.getElementById('weatherIcon').textContent = weather.icon;
                     document.getElementById('weatherText').textContent = 
                         `${weather.temp}°F, ${weather.description} • ${weather.city}`;
                     document.getElementById('weatherChip').style.display = 'flex';
+                    
+                    // Update ember whisper with poetic weather
+                    const now = new Date();
+                    const greeting = getGreetingByHour(now);
+                    this.updateEmberWhisper(greeting);
                 } else {
+                    // Weather unavailable
+                    this.currentWeather = null;
+                    const now = new Date();
+                    const greeting = getGreetingByHour(now);
+                    document.getElementById('emberWhisper').textContent = 
+                        `${greeting}. I couldn't read the sky right now, but I'm still here with you.`;
+                    
                     // Show "Set location" link if weather is unavailable
                     const hasManualLocation = localStorage.getItem('manual-location');
                     if (!hasManualLocation) {
@@ -1555,6 +1626,7 @@
             clearWeatherCache() {
                 localStorage.removeItem('weather-cache');
                 localStorage.removeItem('manual-location');
+                this.currentWeather = null;
                 this.showToast('Weather cache cleared', 'success');
                 
                 // Reload weather
