@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ember Diary</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #faf7f4;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c2420;
+            --text-secondary: #6b5d54;
+            --accent: #d97757;
+            --accent-hover: #c46545;
+            --border: #e8dfd7;
+            --shadow: rgba(0, 0, 0, 0.05);
+            --success: #7fb069;
+            --danger: #e07a5f;
+            --warning: #f4a261;
+        }
+
+        body.dark-mode {
+            --bg-primary: #1a1613;
+            --bg-secondary: #2c2420;
+            --text-primary: #f5ede6;
+            --text-secondary: #c4b5a8;
+            --accent: #e89778;
+            --accent-hover: #f0a88a;
+            --border: #3d3330;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .mood-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .mood-button {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .mood-button:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .mood-button.selected {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .mood-emoji {
+            font-size: 24px;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        button.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        button.secondary:hover {
+            background: var(--border);
+        }
+
+        button.danger {
+            background: var(--danger);
+        }
+
+        button.danger:hover {
+            background: #c96a51;
+        }
+
+        .banner {
+            background: var(--warning);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .banner.hidden {
+            display: none;
+        }
+
+        .banner button {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+
+        .entry-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .entry-card {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .entry-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .entry-mood {
+            font-size: 20px;
+        }
+
+        .entry-date {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .entry-preview {
+            color: var(--text-secondary);
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .entry-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .entry-card.expanded .entry-details {
+            display: block;
+        }
+
+        .entry-card.expanded .entry-preview {
+            display: none;
+        }
+
+        .entry-whisper {
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+        }
+
+        .entry-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .tag {
+            background: var(--accent);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .filters {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-row > * {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px var(--shadow);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .mood-button {
+                min-width: 70px;
+                padding: 10px 12px;
+            }
+
+            .filter-row > * {
+                min-width: 100%;
+            }
+
+            .toast {
+                left: 20px;
+                right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 Ember Diary</h1>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="new-entry">New Entry</button>
+            <button class="tab-button" data-tab="history">History</button>
+            <button class="tab-button" data-tab="settings">Settings</button>
+        </div>
+
+        <!-- New Entry Tab -->
+        <div class="tab-content active" id="new-entry">
+            <div class="banner hidden" id="draftBanner">
+                <span>📝 Recovered unsaved draft</span>
+                <button onclick="app.dismissDraftBanner()">Dismiss</button>
+            </div>
+
+            <form id="entryForm">
+                <div class="form-group">
+                    <label>How are you feeling?</label>
+                    <div class="mood-selector" id="moodSelector">
+                        <button type="button" class="mood-button" data-mood="Calm">
+                            <span class="mood-emoji">😌</span>
+                            <span>Calm</span>
+                        </button>
+                        <button type="button" class="mood-button" data-mood="Good">
+                            <span class="mood-emoji">🙂</span>
+                            <span>Good</span>
+                        </button>
+                        <button type="button" class="mood-button" data-mood="Low">
+                            <span class="mood-emoji">😔</span>
+                            <span>Low</span>
+                        </button>
+                        <button type="button" class="mood-button" data-mood="Angry">
+                            <span class="mood-emoji">😠</span>
+                            <span>Angry</span>
+                        </button>
+                        <button type="button" class="mood-button" data-mood="Overwhelmed">
+                            <span class="mood-emoji">😵</span>
+                            <span>Overwhelmed</span>
+                        </button>
+                        <button type="button" class="mood-button" data-mood="Tired">
+                            <span class="mood-emoji">😴</span>
+                            <span>Tired</span>
+                        </button>
+                        <button type="button" class="mood-button" data-mood="Excited">
+                            <span class="mood-emoji">✨</span>
+                            <span>Excited</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tagsInput">Tags (comma separated)</label>
+                    <input type="text" id="tagsInput" placeholder="work, reflection, gratitude">
+                </div>
+
+                <div class="form-group">
+                    <label for="whisperInput">What's on your mind?</label>
+                    <textarea id="whisperInput" placeholder="Write your thoughts here..."></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit">Save Entry</button>
+                    <button type="button" class="secondary" onclick="app.clearDraft()">Clear Draft</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- History Tab -->
+        <div class="tab-content" id="history">
+            <div class="filters">
+                <div class="filter-row">
+                    <div>
+                        <label for="moodFilter">Filter by mood</label>
+                        <select id="moodFilter">
+                            <option value="">All moods</option>
+                            <option value="Calm">😌 Calm</option>
+                            <option value="Good">🙂 Good</option>
+                            <option value="Low">😔 Low</option>
+                            <option value="Angry">😠 Angry</option>
+                            <option value="Overwhelmed">😵 Overwhelmed</option>
+                            <option value="Tired">😴 Tired</option>
+                            <option value="Excited">✨ Excited</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="tagFilter">Search tags</label>
+                        <input type="text" id="tagFilter" placeholder="Enter tag to search">
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="entryCount">0</div>
+                    <div class="stat-label">Total Entries</div>
+                </div>
+            </div>
+
+            <div class="entry-list" id="entryList"></div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings">
+            <div class="form-group">
+                <label>Export Data</label>
+                <button onclick="app.exportData()">📥 Export All Entries (JSON)</button>
+            </div>
+
+            <div class="form-group">
+                <label>Import Data</label>
+                <input type="file" id="importFile" accept=".json" onchange="app.importData(event)">
+                <button onclick="document.getElementById('importFile').click()">📤 Import from JSON</button>
+            </div>
+
+            <div class="form-group">
+                <label>Danger Zone</label>
+                <button class="danger" onclick="app.deleteAllData()">🗑️ Delete All Data</button>
+            </div>
+
+            <div class="form-group">
+                <label>About</label>
+                <p style="color: var(--text-secondary); font-size: 14px;">
+                    Ember Diary v0.1.0<br>
+                    A simple, calming diary app with local storage.<br>
+                    All your data stays on your device.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === APP STATE AND CONSTANTS ===
+        const APP_VERSION = '0.1.0';
+        const DB_NAME = 'EmberDiaryDB';
+        const DB_VERSION = 1;
+        const STORE_ENTRIES = 'entries';
+        const STORE_DRAFT = 'draft';
+        const DRAFT_KEY = 'current_draft';
+        const AUTOSAVE_DELAY = 600;
+
+        const MOOD_EMOJIS = {
+            'Calm': '😌',
+            'Good': '🙂',
+            'Low': '😔',
+            'Angry': '😠',
+            'Overwhelmed': '😵',
+            'Tired': '😴',
+            'Excited': '✨'
+        };
+
+        // === UTILITY FUNCTIONS ===
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // === DATABASE OPERATIONS ===
+        class Database {
+            constructor() {
+                this.db = null;
+            }
+
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve();
+                    };
+
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+
+                        if (!db.objectStoreNames.contains(STORE_ENTRIES)) {
+                            db.createObjectStore(STORE_ENTRIES, { keyPath: 'id' });
+                        }
+
+                        if (!db.objectStoreNames.contains(STORE_DRAFT)) {
+                            db.createObjectStore(STORE_DRAFT, { keyPath: 'key' });
+                        }
+                    };
+                });
+            }
+
+            async saveEntry(entry) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_ENTRIES], 'readwrite');
+                    const store = transaction.objectStore(STORE_ENTRIES);
+                    const request = store.put(entry);
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async getAllEntries() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_ENTRIES], 'readonly');
+                    const store = transaction.objectStore(STORE_ENTRIES);
+                    const request = store.getAll();
+
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async deleteEntry(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_ENTRIES], 'readwrite');
+                    const store = transaction.objectStore(STORE_ENTRIES);
+                    const request = store.delete(id);
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async saveDraft(draft) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_DRAFT], 'readwrite');
+                    const store = transaction.objectStore(STORE_DRAFT);
+                    const request = store.put({ key: DRAFT_KEY, ...draft });
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async getDraft() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_DRAFT], 'readonly');
+                    const store = transaction.objectStore(STORE_DRAFT);
+                    const request = store.get(DRAFT_KEY);
+
+                    request.onsuccess = () => resolve(request.result || null);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async clearDraft() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_DRAFT], 'readwrite');
+                    const store = transaction.objectStore(STORE_DRAFT);
+                    const request = store.delete(DRAFT_KEY);
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async clearAllData() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([STORE_ENTRIES, STORE_DRAFT], 'readwrite');
+                    
+                    const entriesStore = transaction.objectStore(STORE_ENTRIES);
+                    const draftStore = transaction.objectStore(STORE_DRAFT);
+                    
+                    entriesStore.clear();
+                    draftStore.clear();
+
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+            }
+        }
+
+        // === MAIN APP ===
+        class EmberDiary {
+            constructor() {
+                this.db = new Database();
+                this.currentTab = 'new-entry';
+                this.entries = [];
+                this.selectedMood = '';
+                this.autosaveDraft = debounce(() => this.saveDraft(), AUTOSAVE_DELAY);
+            }
+
+            async init() {
+                try {
+                    await this.db.init();
+                    this.setupEventListeners();
+                    this.loadTheme();
+                    await this.loadDraft();
+                    await this.loadEntries();
+                    this.showToast('Welcome to Ember Diary! 🔥', 'success');
+                } catch (error) {
+                    console.error('Initialization error:', error);
+                    this.showToast('Failed to initialize app', 'error');
+                }
+            }
+
+            setupEventListeners() {
+                // Tab navigation
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', () => this.switchTab(button.dataset.tab));
+                });
+
+                // Mood selector
+                document.querySelectorAll('.mood-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.selectMood(button.dataset.mood);
+                    });
+                });
+
+                // Form submission
+                document.getElementById('entryForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveEntry();
+                });
+
+                // Auto-save draft on input
+                ['whisperInput', 'tagsInput'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        this.autosaveDraft();
+                    });
+                });
+
+                // Filters
+                document.getElementById('moodFilter').addEventListener('change', () => this.filterEntries());
+                document.getElementById('tagFilter').addEventListener('input', debounce(() => this.filterEntries(), 300));
+
+                // Theme toggle
+                document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
+            }
+
+            switchTab(tabName) {
+                this.currentTab = tabName;
+
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tabName);
+                });
+
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('active', content.id === tabName);
+                });
+
+                if (tabName === 'history') {
+                    this.renderEntries();
+                }
+            }
+
+            selectMood(mood) {
+                this.selectedMood = mood;
+                document.querySelectorAll('.mood-button').forEach(btn => {
+                    btn.classList.toggle('selected', btn.dataset.mood === mood);
+                });
+                this.autosaveDraft();
+            }
+
+            async saveDraft() {
+                const whisper = document.getElementById('whisperInput').value;
+                const tags = document.getElementById('tagsInput').value;
+
+                if (!whisper && !tags && !this.selectedMood) {
+                    return; // Nothing to save
+                }
+
+                const draft = {
+                    mood: this.selectedMood,
+                    whisper: whisper,
+                    tags: tags,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    await this.db.saveDraft(draft);
+                } catch (error) {
+                    console.error('Failed to save draft:', error);
+                }
+            }
+
+            async loadDraft() {
+                try {
+                    const draft = await this.db.getDraft();
+                    if (draft && (draft.whisper || draft.tags || draft.mood)) {
+                        document.getElementById('whisperInput').value = draft.whisper || '';
+                        document.getElementById('tagsInput').value = draft.tags || '';
+                        if (draft.mood) {
+                            this.selectMood(draft.mood);
+                        }
+                        document.getElementById('draftBanner').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Failed to load draft:', error);
+                }
+            }
+
+            dismissDraftBanner() {
+                document.getElementById('draftBanner').classList.add('hidden');
+            }
+
+            async clearDraft() {
+                if (!confirm('Are you sure you want to clear the current draft?')) {
+                    return;
+                }
+
+                try {
+                    await this.db.clearDraft();
+                    document.getElementById('whisperInput').value = '';
+                    document.getElementById('tagsInput').value = '';
+                    this.selectedMood = '';
+                    document.querySelectorAll('.mood-button').forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+                    document.getElementById('draftBanner').classList.add('hidden');
+                    this.showToast('Draft cleared', 'success');
+                } catch (error) {
+                    console.error('Failed to clear draft:', error);
+                    this.showToast('Failed to clear draft', 'error');
+                }
+            }
+
+            async saveEntry() {
+                const whisper = document.getElementById('whisperInput').value.trim();
+                const tagsInput = document.getElementById('tagsInput').value.trim();
+                const mood = this.selectedMood;
+
+                if (!whisper) {
+                    this.showToast('Please write something before saving', 'error');
+                    return;
+                }
+
+                if (!mood) {
+                    this.showToast('Please select a mood', 'error');
+                    return;
+                }
+
+                const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
+
+                const entry = {
+                    id: generateUUID(),
+                    createdAt: new Date().toISOString(),
+                    mood: mood,
+                    whisper: whisper,
+                    tags: tags,
+                    appVersion: APP_VERSION
+                };
+
+                try {
+                    await this.db.saveEntry(entry);
+                    await this.db.clearDraft();
+
+                    // Clear form
+                    document.getElementById('whisperInput').value = '';
+                    document.getElementById('tagsInput').value = '';
+                    this.selectedMood = '';
+                    document.querySelectorAll('.mood-button').forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+                    document.getElementById('draftBanner').classList.add('hidden');
+
+                    await this.loadEntries();
+                    this.showToast('Entry saved successfully! ✨', 'success');
+                } catch (error) {
+                    console.error('Failed to save entry:', error);
+                    this.showToast('Failed to save entry', 'error');
+                }
+            }
+
+            async loadEntries() {
+                try {
+                    this.entries = await this.db.getAllEntries();
+                    this.entries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    this.renderEntries();
+                    this.updateStats();
+                } catch (error) {
+                    console.error('Failed to load entries:', error);
+                    this.showToast('Failed to load entries', 'error');
+                }
+            }
+
+            updateStats() {
+                document.getElementById('entryCount').textContent = this.entries.length;
+            }
+
+            filterEntries() {
+                const moodFilter = document.getElementById('moodFilter').value;
+                const tagFilter = document.getElementById('tagFilter').value.toLowerCase().trim();
+
+                let filtered = this.entries;
+
+                if (moodFilter) {
+                    filtered = filtered.filter(e => e.mood === moodFilter);
+                }
+
+                if (tagFilter) {
+                    filtered = filtered.filter(e => 
+                        e.tags.some(tag => tag.toLowerCase().includes(tagFilter))
+                    );
+                }
+
+                this.renderEntries(filtered);
+            }
+
+            renderEntries(entriesToRender = null) {
+                const entryList = document.getElementById('entryList');
+                const entries = entriesToRender || this.entries;
+
+                if (entries.length === 0) {
+                    entryList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📖</div>
+                            <p>No entries yet. Start writing your first diary entry!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                entryList.innerHTML = entries.map(entry => {
+                    const preview = entry.whisper.substring(0, 100) + (entry.whisper.length > 100 ? '...' : '');
+                    const tagsHtml = entry.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+
+                    return `
+                        <div class="entry-card" data-id="${entry.id}">
+                            <div class="entry-header">
+                                <span class="entry-mood">${MOOD_EMOJIS[entry.mood] || '😌'} ${entry.mood}</span>
+                                <span class="entry-date">${formatDate(entry.createdAt)}</span>
+                            </div>
+                            <div class="entry-preview">${preview}</div>
+                            <div class="entry-details">
+                                <div class="entry-whisper">${entry.whisper}</div>
+                                ${entry.tags.length > 0 ? `<div class="entry-tags">${tagsHtml}</div>` : ''}
+                                <button class="danger" onclick="app.deleteEntry('${entry.id}')">Delete Entry</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Add click handlers for expansion
+                document.querySelectorAll('.entry-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (e.target.tagName !== 'BUTTON') {
+                            card.classList.toggle('expanded');
+                        }
+                    });
+                });
+            }
+
+            async deleteEntry(id) {
+                if (!confirm('Are you sure you want to delete this entry? This cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    await this.db.deleteEntry(id);
+                    await this.loadEntries();
+                    this.showToast('Entry deleted', 'success');
+                } catch (error) {
+                    console.error('Failed to delete entry:', error);
+                    this.showToast('Failed to delete entry', 'error');
+                }
+            }
+
+            async exportData() {
+                try {
+                    const entries = await this.db.getAllEntries();
+                    const exportData = {
+                        version: APP_VERSION,
+                        exportDate: new Date().toISOString(),
+                        entries: entries
+                    };
+
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ember-diary-export-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    this.showToast('Data exported successfully!', 'success');
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    this.showToast('Failed to export data', 'error');
+                }
+            }
+
+            async importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+
+                    if (!data.entries || !Array.isArray(data.entries)) {
+                        throw new Error('Invalid data format');
+                    }
+
+                    // Get existing entries to check for duplicates
+                    const existingEntries = await this.db.getAllEntries();
+                    const existingIds = new Set(existingEntries.map(e => e.id));
+
+                    let imported = 0;
+                    let skipped = 0;
+
+                    for (const entry of data.entries) {
+                        if (!existingIds.has(entry.id)) {
+                            await this.db.saveEntry(entry);
+                            imported++;
+                        } else {
+                            skipped++;
+                        }
+                    }
+
+                    await this.loadEntries();
+                    this.showToast(`Imported ${imported} entries (${skipped} duplicates skipped)`, 'success');
+                } catch (error) {
+                    console.error('Import failed:', error);
+                    this.showToast('Failed to import data. Check file format.', 'error');
+                } finally {
+                    event.target.value = ''; // Clear file input
+                }
+            }
+
+            async deleteAllData() {
+                if (!confirm('Are you sure you want to delete ALL data? This cannot be undone!')) {
+                    return;
+                }
+
+                if (!confirm('This will permanently delete all your entries. Are you absolutely sure?')) {
+                    return;
+                }
+
+                try {
+                    await this.db.clearAllData();
+                    this.entries = [];
+                    this.renderEntries();
+                    this.updateStats();
+                    this.showToast('All data deleted', 'success');
+                } catch (error) {
+                    console.error('Failed to delete data:', error);
+                    this.showToast('Failed to delete data', 'error');
+                }
+            }
+
+            loadTheme() {
+                const theme = localStorage.getItem('ember-theme') || 'light';
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-mode');
+                    document.getElementById('themeToggle').textContent = '☀️';
+                }
+            }
+
+            toggleTheme() {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
+                localStorage.setItem('ember-theme', isDark ? 'dark' : 'light');
+            }
+
+            showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+        }
+
+        // === INITIALIZE APP ===
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new EmberDiary();
+            app.init();
+        });
+    </script>
+</body>
+</html>
